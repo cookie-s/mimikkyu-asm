@@ -74,8 +74,13 @@ pub fn parse_asm(assembly: &String) -> AsmOpList {
             if let Ok(i) = cst.parse::<i32>() {
                 return Ok(Const::Int(i));
             };
-
             // FIXME kuso-es
+            if cst.starts_with('0') {
+                if cst.starts_with("0x") {
+                    return Ok(Const::Int(i64::from_str_radix(&cst[2..], 16).unwrap() as i32));
+                }
+            }
+
             if cst.starts_with("(") && cst.ends_with(")@h") {
                 let name = cst.trim_left_matches("(").trim_right_matches(")@h");
                 Ok(Const::AddrH(String::from(name)))
@@ -303,7 +308,7 @@ pub fn parse_asm(assembly: &String) -> AsmOpList {
         .collect()
 }
 
-pub fn convert_to_realops(asm: AsmOpList) -> OpList {
+pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
     fn collect_labels(asm: &AsmOpList) -> HashMap<String, i32> {
         let mut res = HashMap::new();
         let mut addr = 0;
@@ -320,13 +325,16 @@ pub fn convert_to_realops(asm: AsmOpList) -> OpList {
     }
     fn convert_one(asm: &AsmOp, labels: &HashMap<String, i32>) -> Option<Op> {
         fn resolve_const(cst: &Const, labels: &HashMap<String, i32>) -> i32 {
-            match cst {
-                &Const::Addr(ref label) => *labels.get(label).unwrap(),
-                &Const::AddrH(ref label) => (*labels.get(label).unwrap() as u32 >> 16) as i32,
-                &Const::AddrL(ref label) => {
+            match *cst {
+                Const::Addr(ref label) => {
+                    println!("{}", label);
+                    *labels.get(label).unwrap()
+                }
+                Const::AddrH(ref label) => (*labels.get(label).unwrap() as u32 >> 16) as i32,
+                Const::AddrL(ref label) => {
                     (*labels.get(label).unwrap() as u32 & ((1 << 16) - 1)) as i32
                 }
-                &Const::Int(i) => i,
+                Const::Int(i) => i,
             }
         }
 
