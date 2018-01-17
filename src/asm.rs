@@ -1,8 +1,8 @@
 extern crate std;
 use std::collections::HashMap;
 
-use super::{AsmOpList, CReg, FReg, GReg, OpList};
-use super::op::Op;
+use super::{AsmOpList, CReg, FReg, GReg, OpList, SPReg};
+use super::op::{Condition, Op};
 
 #[derive(Debug)]
 pub enum Const {
@@ -318,7 +318,7 @@ pub fn convert_to_realops(asm: AsmOpList) -> OpList {
         }
         res
     }
-    fn convert_one(asm: &AsmOp, labels: &HashMap<String, i32>) -> Op {
+    fn convert_one(asm: &AsmOp, labels: &HashMap<String, i32>) -> Option<Op> {
         fn resolve_const(cst: &Const, labels: &HashMap<String, i32>) -> i32 {
             match cst {
                 &Const::Addr(ref label) => *labels.get(label).unwrap(),
@@ -330,67 +330,55 @@ pub fn convert_to_realops(asm: AsmOpList) -> OpList {
             }
         }
 
-        match asm {
-            &AsmOp::LIS(rt, ref dat) => Op::ADDIS(rt, GReg(0), resolve_const(dat, labels)),
-            /*
-            LI(GReg, Const),
-            ADDI(GReg, GReg, Const),
-            ADDIS(GReg, GReg, Const),
-            ADD(GReg, GReg, GReg),
-            SUBF(GReg, GReg, GReg),
-            NEG(GReg, GReg),
-
-            AND(GReg, GReg, GReg),
-            ANDI(GReg, GReg, Const),
-            ANDIS(GReg, GReg, Const),
-            OR(GReg, GReg, GReg),
-            ORI(GReg, GReg, Const),
-            XOR(GReg, GReg, GReg),
-            SLW(GReg, GReg, GReg),
-            SRW(GReg, GReg, GReg),
-
-            MFLR(GReg),
-            MTLR(GReg),
-            MTCTR(GReg),
-
-            LWZ(GReg, Const, GReg),
-            STW(GReg, Const, GReg),
-
-            FADD(FReg, FReg, FReg),
-            FSUB(FReg, FReg, FReg),
-            FMUL(FReg, FReg, FReg),
-            FDIV(FReg, FReg, FReg),
-            FNEG(FReg, FReg),
-            FMR(FReg, FReg),
-            FCMP(CReg, FReg, FReg),
-
-            LFS(FReg, Const, GReg),
-            STFS(FReg, Const, GReg),
-            CMP(CReg, GReg, GReg),
-            CMPWI(CReg, GReg, Const),
-
-            B(Const),
-            BL(Const),
-            BLR(),
-            BCTR(),
-            BCTRL(),
-            BEQ(CReg, Const),
-            BNE(CReg, Const),
-            BLT(CReg, Const),
-            //BLE(CReg, Const),
-            BGT(CReg, Const),
-            //BGE(CReg, Const),
-            SC(),
-
-            LABEL(String),
-            LONG(Const),
-            */
-            _ => Op::ADDIS(GReg(0), GReg(0), 0),
-        }
+        Some(match *asm {
+            AsmOp::LIS(rt, ref dat) => Op::ADDIS(rt, GReg(0), resolve_const(dat, labels)),
+            AsmOp::LI(rt, ref dat) => Op::ADDI(rt, GReg(0), resolve_const(dat, labels)),
+            AsmOp::ADDIS(rt, ra, ref dat) => Op::ADDIS(rt, ra, resolve_const(dat, labels)),
+            AsmOp::ADDI(rt, ra, ref dat) => Op::ADDI(rt, ra, resolve_const(dat, labels)),
+            AsmOp::ADD(rt, ra, rb) => Op::ADD(rt, ra, rb),
+            AsmOp::SUBF(rt, ra, rb) => Op::SUBF(rt, ra, rb),
+            AsmOp::NEG(rt, ra) => Op::NEG(rt, ra),
+            AsmOp::AND(rt, ra, rb) => Op::AND(rt, ra, rb),
+            AsmOp::ANDI(rt, ra, ref dat) => Op::ANDI(rt, ra, resolve_const(dat, labels)),
+            AsmOp::ANDIS(rt, ra, ref dat) => Op::ANDIS(rt, ra, resolve_const(dat, labels)),
+            AsmOp::OR(rt, ra, rb) => Op::OR(rt, ra, rb),
+            AsmOp::ORI(rt, ra, ref dat) => Op::ORI(rt, ra, resolve_const(dat, labels)),
+            AsmOp::XOR(rt, ra, rb) => Op::XOR(rt, ra, rb),
+            AsmOp::SLW(rt, ra, rb) => Op::SLW(rt, ra, rb),
+            AsmOp::SRW(rt, ra, rb) => Op::SRW(rt, ra, rb),
+            AsmOp::MFLR(rt) => Op::MFSPR(SPReg::LK, rt),
+            AsmOp::MTLR(rt) => Op::MTSPR(SPReg::LK, rt),
+            AsmOp::MTCTR(rt) => Op::MTSPR(SPReg::CTR, rt),
+            AsmOp::LWZ(rt, ref dat, ra) => Op::LWZ(rt, resolve_const(dat, labels), ra),
+            AsmOp::STW(rt, ref dat, ra) => Op::STW(rt, resolve_const(dat, labels), ra),
+            AsmOp::FADD(frt, fra, frb) => Op::FADD(frt, fra, frb),
+            AsmOp::FSUB(frt, fra, frb) => Op::FSUB(frt, fra, frb),
+            AsmOp::FMUL(frt, fra, frb) => Op::FMUL(frt, fra, frb),
+            AsmOp::FDIV(frt, fra, frb) => Op::FDIV(frt, fra, frb),
+            AsmOp::FNEG(frt, fra) => Op::FNEG(frt, fra),
+            AsmOp::FMR(frt, frs) => Op::FMR(frt, frs),
+            AsmOp::FCMP(cr, fra, frt) => Op::FCMP(cr, fra, frt),
+            AsmOp::LFS(frt, ref dat, ra) => Op::LFS(frt, resolve_const(dat, labels), ra),
+            AsmOp::STFS(frt, ref dat, ra) => Op::STFS(frt, resolve_const(dat, labels), ra),
+            AsmOp::CMP(cr, ra, rb) => Op::CMP(cr, ra, rb),
+            AsmOp::CMPWI(cr, ra, ref dat) => Op::CMPWI(cr, ra, resolve_const(dat, labels)),
+            AsmOp::B(ref dat) => Op::B(resolve_const(dat, labels), false),
+            AsmOp::BL(ref dat) => Op::B(resolve_const(dat, labels), true),
+            AsmOp::BLR() => Op::BSPR(SPReg::LK, false),
+            AsmOp::BCTR() => Op::BSPR(SPReg::CTR, false),
+            AsmOp::BCTRL() => Op::BSPR(SPReg::CTR, true),
+            AsmOp::BEQ(cr, ref dat) => Op::BC(cr, resolve_const(dat, labels), Condition::EQ),
+            AsmOp::BNE(cr, ref dat) => Op::BC(cr, resolve_const(dat, labels), Condition::NE),
+            AsmOp::BLT(cr, ref dat) => Op::BC(cr, resolve_const(dat, labels), Condition::LT),
+            AsmOp::BGT(cr, ref dat) => Op::BC(cr, resolve_const(dat, labels), Condition::GT),
+            AsmOp::SC() => Op::SC(),
+            AsmOp::LABEL(_) => return None,
+            AsmOp::LONG(ref dat) => Op::LONG(resolve_const(dat, labels)),
+        })
     }
 
     let labels = collect_labels(&asm);
     asm.into_iter()
-        .map(|asm| convert_one(&asm, &labels))
+        .filter_map(|asm| convert_one(&asm, &labels))
         .collect()
 }

@@ -27,9 +27,8 @@ pub enum Op {
     SLW(GReg, GReg, GReg),
     SRW(GReg, GReg, GReg),
 
-    MFLR(GReg),
-    MTLR(GReg),
-    MTCTR(GReg),
+    MFSPR(SPReg, GReg),
+    MTSPR(SPReg, GReg),
 
     LWZ(GReg, i32, GReg),
     STW(GReg, i32, GReg),
