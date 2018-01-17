@@ -78,6 +78,7 @@ pub fn parse_asm(assembly: &String) -> Vec<AsmOp> {
                 return Ok(Const::Int(i));
             };
 
+            // FIXME kuso-es
             if cst.starts_with("(") && cst.ends_with(")@h") {
                 let name = cst.trim_left_matches("(").trim_right_matches(")@h");
                 Ok(Const::AddrH(String::from(name)))
@@ -122,6 +123,7 @@ pub fn parse_asm(assembly: &String) -> Vec<AsmOp> {
             Ok(String::from(name.trim_right_matches(":")))
         }
         fn parse_addr(addr: &str) -> Result<(Const, GReg), ()> {
+            // FIXME kuso
             let (off, base) = addr.split_at(addr.rfind('(').ok_or(())?);
             let off = parse_const(off)?;
             let base = parse_greg(base.trim_left_matches('(').trim_right_matches(')'))?;
@@ -206,7 +208,7 @@ pub fn parse_asm(assembly: &String) -> Vec<AsmOp> {
                 }
             }
             "addi" | "addis" | "ori" | "andi." | "andis." => {
-                // TODO: andi. andis.
+                // TODO: delete dot?
                 let rt = expect_line_result!(parse_greg(expect_line_option!(parm.next())));
                 let ra = expect_line_result!(parse_greg(expect_line_option!(parm.next())));
                 let ct = expect_line_result!(parse_const(expect_line_option!(parm.next())));
