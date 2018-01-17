@@ -1,11 +1,8 @@
 extern crate std;
+use std::collections::HashMap;
 
-#[derive(Debug)]
-pub struct GReg(i32);
-#[derive(Debug)]
-pub struct FReg(i32);
-#[derive(Debug)]
-pub struct CReg(i32);
+use super::{AsmOpList, CReg, FReg, GReg, OpList};
+use super::op::Op;
 
 #[derive(Debug)]
 pub enum Const {
@@ -71,7 +68,7 @@ pub enum AsmOp {
     LONG(Const),
 }
 
-pub fn parse_asm(assembly: &String) -> Vec<AsmOp> {
+pub fn parse_asm(assembly: &String) -> AsmOpList {
     fn parse_line(line: &str) -> Result<AsmOp, ()> {
         fn parse_const(cst: &str) -> Result<Const, ()> {
             if let Ok(i) = cst.parse::<i32>() {
@@ -303,5 +300,97 @@ pub fn parse_asm(assembly: &String) -> Vec<AsmOp> {
     assembly
         .lines()
         .filter_map(|ln| parse_line(ln).ok())
+        .collect()
+}
+
+pub fn convert_to_realops(asm: AsmOpList) -> OpList {
+    fn collect_labels(asm: &AsmOpList) -> HashMap<String, i32> {
+        let mut res = HashMap::new();
+        let mut addr = 0;
+        for asmop in asm.into_iter() {
+            if let &AsmOp::LABEL(ref label) = asmop {
+                let label = label.clone();
+                assert!(!res.contains_key(&label));
+                res.insert(label, addr);
+            } else {
+                addr += 4;
+            }
+        }
+        res
+    }
+    fn convert_one(asm: &AsmOp, labels: &HashMap<String, i32>) -> Op {
+        fn resolve_const(cst: &Const, labels: &HashMap<String, i32>) -> i32 {
+            match cst {
+                &Const::Addr(ref label) => *labels.get(label).unwrap(),
+                &Const::AddrH(ref label) => (*labels.get(label).unwrap() as u32 >> 16) as i32,
+                &Const::AddrL(ref label) => {
+                    (*labels.get(label).unwrap() as u32 & ((1 << 16) - 1)) as i32
+                }
+                &Const::Int(i) => i,
+            }
+        }
+
+        match asm {
+            &AsmOp::LIS(rt, ref dat) => Op::ADDIS(rt, GReg(0), resolve_const(dat, labels)),
+            /*
+            LI(GReg, Const),
+            ADDI(GReg, GReg, Const),
+            ADDIS(GReg, GReg, Const),
+            ADD(GReg, GReg, GReg),
+            SUBF(GReg, GReg, GReg),
+            NEG(GReg, GReg),
+
+            AND(GReg, GReg, GReg),
+            ANDI(GReg, GReg, Const),
+            ANDIS(GReg, GReg, Const),
+            OR(GReg, GReg, GReg),
+            ORI(GReg, GReg, Const),
+            XOR(GReg, GReg, GReg),
+            SLW(GReg, GReg, GReg),
+            SRW(GReg, GReg, GReg),
+
+            MFLR(GReg),
+            MTLR(GReg),
+            MTCTR(GReg),
+
+            LWZ(GReg, Const, GReg),
+            STW(GReg, Const, GReg),
+
+            FADD(FReg, FReg, FReg),
+            FSUB(FReg, FReg, FReg),
+            FMUL(FReg, FReg, FReg),
+            FDIV(FReg, FReg, FReg),
+            FNEG(FReg, FReg),
+            FMR(FReg, FReg),
+            FCMP(CReg, FReg, FReg),
+
+            LFS(FReg, Const, GReg),
+            STFS(FReg, Const, GReg),
+            CMP(CReg, GReg, GReg),
+            CMPWI(CReg, GReg, Const),
+
+            B(Const),
+            BL(Const),
+            BLR(),
+            BCTR(),
+            BCTRL(),
+            BEQ(CReg, Const),
+            BNE(CReg, Const),
+            BLT(CReg, Const),
+            //BLE(CReg, Const),
+            BGT(CReg, Const),
+            //BGE(CReg, Const),
+            SC(),
+
+            LABEL(String),
+            LONG(Const),
+            */
+            _ => Op::ADDIS(GReg(0), GReg(0), 0),
+        }
+    }
+
+    let labels = collect_labels(&asm);
+    asm.into_iter()
+        .map(|asm| convert_one(&asm, &labels))
         .collect()
 }
