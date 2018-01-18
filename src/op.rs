@@ -240,8 +240,7 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (greg_to_id(rt), 5),
             (greg_to_id(ra), 5),
             (greg_to_id(rb), 5),
-            (0, 1),
-            (get_xocode(&op), 9),
+            (get_xocode(&op), 10),
             (1, 1),
         ]),
         Op::NEG(rt, ra) => to_bin(&vec![
@@ -249,8 +248,7 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (greg_to_id(rt), 5),
             (greg_to_id(ra), 5),
             (0, 5),
-            (0, 1),
-            (get_xocode(&op), 9),
+            (get_xocode(&op), 10),
             (1, 1),
         ]),
         Op::MFSPR(rt, ra) | Op::MTSPR(rt, ra) => to_bin(&vec![
