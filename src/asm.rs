@@ -9,7 +9,7 @@ pub enum Const {
     Addr(String),
     AddrH(String),
     AddrL(String),
-    Int(i32),
+    Int(u32),
 }
 
 #[derive(Debug)]
@@ -71,13 +71,13 @@ pub enum AsmOp {
 pub fn parse_asm(assembly: &String) -> AsmOpList {
     fn parse_line(line: &str) -> Result<AsmOp, ()> {
         fn parse_const(cst: &str) -> Result<Const, ()> {
-            if let Ok(i) = cst.parse::<i32>() {
-                return Ok(Const::Int(i));
+            if let Ok(i) = cst.parse::<i64>() {
+                return Ok(Const::Int(i as u32));
             };
             // FIXME kuso-es
             if cst.starts_with('0') {
                 if cst.starts_with("0x") {
-                    return Ok(Const::Int(i64::from_str_radix(&cst[2..], 16).unwrap() as i32));
+                    return Ok(Const::Int(u32::from_str_radix(&cst[2..], 16).unwrap()));
                 }
             }
 
@@ -309,7 +309,7 @@ pub fn parse_asm(assembly: &String) -> AsmOpList {
 }
 
 pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
-    fn collect_labels(asm: &AsmOpList) -> HashMap<String, i32> {
+    fn collect_labels(asm: &AsmOpList) -> HashMap<String, u32> {
         let mut res = HashMap::new();
         let mut addr = 0;
         for asmop in asm.into_iter() {
@@ -323,17 +323,15 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
         }
         res
     }
-    fn convert_one(asm: &AsmOp, labels: &HashMap<String, i32>) -> Option<Op> {
-        fn resolve_const(cst: &Const, labels: &HashMap<String, i32>) -> i32 {
+    fn convert_one(asm: &AsmOp, labels: &HashMap<String, u32>, addr: u32) -> Option<Op> {
+        fn resolve_const(cst: &Const, labels: &HashMap<String, u32>) -> u32 {
             match *cst {
                 Const::Addr(ref label) => {
                     println!("{}", label);
                     *labels.get(label).unwrap()
                 }
-                Const::AddrH(ref label) => (*labels.get(label).unwrap() as u32 >> 16) as i32,
-                Const::AddrL(ref label) => {
-                    (*labels.get(label).unwrap() as u32 & ((1 << 16) - 1)) as i32
-                }
+                Const::AddrH(ref label) => (*labels.get(label).unwrap() >> 16),
+                Const::AddrL(ref label) => (*labels.get(label).unwrap() & ((1 << 16) - 1)),
                 Const::Int(i) => i,
             }
         }
@@ -372,13 +370,33 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
             AsmOp::CMPWI(cr, ra, ref dat) => Op::CMPWI(cr, ra, resolve_const(dat, labels)),
             AsmOp::B(ref dat) => Op::B(resolve_const(dat, labels), false),
             AsmOp::BL(ref dat) => Op::B(resolve_const(dat, labels), true),
-            AsmOp::BLR() => Op::BSPR(SPReg::LK, false),
-            AsmOp::BCTR() => Op::BSPR(SPReg::CTR, false),
-            AsmOp::BCTRL() => Op::BSPR(SPReg::CTR, true),
-            AsmOp::BEQ(cr, ref dat) => Op::BC(cr, resolve_const(dat, labels), Condition::EQ),
-            AsmOp::BNE(cr, ref dat) => Op::BC(cr, resolve_const(dat, labels), Condition::NE),
-            AsmOp::BLT(cr, ref dat) => Op::BC(cr, resolve_const(dat, labels), Condition::LT),
-            AsmOp::BGT(cr, ref dat) => Op::BC(cr, resolve_const(dat, labels), Condition::GT),
+            AsmOp::BLR() => Op::BLR(false),
+            AsmOp::BCTR() => Op::BCTR(false),
+            AsmOp::BCTRL() => Op::BCTR(true),
+            AsmOp::BEQ(cr, ref dat) => Op::BC(
+                cr,
+                (resolve_const(dat, labels) as i32 - addr as i32) as u32,
+                Condition::EQ,
+                true,
+            ),
+            AsmOp::BNE(cr, ref dat) => Op::BC(
+                cr,
+                (resolve_const(dat, labels) as i32 - addr as i32) as u32,
+                Condition::NE,
+                true,
+            ),
+            AsmOp::BLT(cr, ref dat) => Op::BC(
+                cr,
+                (resolve_const(dat, labels) as i32 - addr as i32) as u32,
+                Condition::LT,
+                true,
+            ),
+            AsmOp::BGT(cr, ref dat) => Op::BC(
+                cr,
+                (resolve_const(dat, labels) as i32 - addr as i32) as u32,
+                Condition::GT,
+                true,
+            ),
             AsmOp::SC() => Op::SC(),
             AsmOp::LABEL(_) => return None,
             AsmOp::LONG(ref dat) => Op::LONG(resolve_const(dat, labels)),
@@ -386,7 +404,15 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
     }
 
     let labels = collect_labels(&asm);
+    let mut addr = 0;
     asm.into_iter()
-        .filter_map(|asm| convert_one(&asm, &labels))
+        .filter_map(|asm| {
+            convert_one(&asm, &labels, addr).and_then(|x| {
+                Some({
+                    addr += 4;
+                    x
+                })
+            })
+        })
         .collect()
 }
