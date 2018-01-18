@@ -50,7 +50,7 @@ pub enum Op {
     B(u32, bool),                   // LK
     BCTR(bool),                     // LK
     BLR(bool),                      // LK
-    BC(CReg, u32, Condition, bool), // rel
+    BC(CReg, u32, Condition, bool), // abs
     SC(),
 
     LONG(u32),
@@ -120,10 +120,11 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
         }
     }
     fn get_bicode(cr: CReg, cond: Condition) -> u32 {
-        32 - 4 * creg_to_id(cr) + match cond {
+        4 * creg_to_id(cr) + match cond {
             Condition::AL => 0,
-            Condition::EQ | Condition::NE => 1,
-            Condition::LT | Condition::GT => 0,
+            Condition::EQ | Condition::NE => 2,
+            Condition::LT => 0,
+            Condition::GT => 1,
         }
     }
     fn get_bocode(cond: Condition) -> u32 {
@@ -144,16 +145,8 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             }
             assert_eq!(sum_sz, 32);
         }
-        let mut dat = dat.clone();
-        /*
-        if let Some(last) = dat.last_mut() {
-            let (bits, _) = *last;
-            *last = (bits, 0);
-        }
-        */
-
         let mut res = 0u64;
-        for (bits, size) in dat {
+        for &(bits, size) in dat {
             res <<= size;
             res += bits as u64;
         }
@@ -189,18 +182,18 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (greg_to_id(ra), 5),
             (imm as u32 as u16 as u32, 16),
         ]),
-        Op::BC(cr, addr, cond, rel) => to_bin(&vec![
+        Op::BC(cr, addr, cond, abs) => to_bin(&vec![
             (get_opcode(&op), 6),
             (get_bocode(cond), 5),
             (get_bicode(cr, cond), 5),
             ((addr >> 2) as u32, 14),
-            (rel as u32, 1),
+            (abs as u32, 1),
             (0, 1),
         ]),
         Op::B(addr, lk) => to_bin(&vec![
             (get_opcode(&op), 6),
             ((addr >> 2) as u32, 24),
-            (0, 1), // TODO
+            (1, 1), // TODO
             (lk as u32, 1),
         ]),
 
@@ -215,7 +208,7 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
         ]),
         Op::BCTR(lk) => to_bin(&vec![
             (get_opcode(&op), 6),
-            (0b11111, 5),
+            (get_bocode(Condition::AL), 5),
             (0, 5),
             (0, 3),
             (0, 2),
@@ -285,16 +278,24 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (get_xocode(&op), 9),
             (1, 1),
         ]),
-        Op::FADD(frt, fra, frb)
-        | Op::FSUB(frt, fra, frb)
-        | Op::FMUL(frt, fra, frb)
-        | Op::FDIV(frt, fra, frb) => to_bin(&vec![
+        Op::FADD(frt, fra, frb) | Op::FSUB(frt, fra, frb) | Op::FDIV(frt, fra, frb) => {
+            to_bin(&vec![
+                (get_opcode(&op), 6),
+                (freg_to_id(frt), 5),
+                (freg_to_id(fra), 5),
+                (freg_to_id(frb), 5),
+                (0, 5),
+                (get_xocode(&op), 5),
+                (1, 1),
+            ])
+        }
+        Op::FMUL(frt, fra, frb) => to_bin(&vec![
             (get_opcode(&op), 6),
             (freg_to_id(frt), 5),
             (freg_to_id(fra), 5),
+            (0, 5),
             (freg_to_id(frb), 5),
-            (0, 1),
-            (get_xocode(&op), 9),
+            (get_xocode(&op), 5),
             (1, 1),
         ]),
         Op::LONG(x) => x as u32,

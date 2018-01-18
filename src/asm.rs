@@ -326,10 +326,7 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
     fn convert_one(asm: &AsmOp, labels: &HashMap<String, u32>, addr: u32) -> Option<Op> {
         fn resolve_const(cst: &Const, labels: &HashMap<String, u32>) -> u32 {
             match *cst {
-                Const::Addr(ref label) => {
-                    println!("{}", label);
-                    *labels.get(label).unwrap()
-                }
+                Const::Addr(ref label) => *labels.get(label).unwrap(),
                 Const::AddrH(ref label) => (*labels.get(label).unwrap() >> 16),
                 Const::AddrL(ref label) => (*labels.get(label).unwrap() & ((1 << 16) - 1)),
                 Const::Int(i) => i,
@@ -377,25 +374,25 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
                 cr,
                 (resolve_const(dat, labels) as i32 - addr as i32) as u32,
                 Condition::EQ,
-                true,
+                false,
             ),
             AsmOp::BNE(cr, ref dat) => Op::BC(
                 cr,
                 (resolve_const(dat, labels) as i32 - addr as i32) as u32,
                 Condition::NE,
-                true,
+                false,
             ),
             AsmOp::BLT(cr, ref dat) => Op::BC(
                 cr,
                 (resolve_const(dat, labels) as i32 - addr as i32) as u32,
                 Condition::LT,
-                true,
+                false,
             ),
             AsmOp::BGT(cr, ref dat) => Op::BC(
                 cr,
                 (resolve_const(dat, labels) as i32 - addr as i32) as u32,
                 Condition::GT,
-                true,
+                false,
             ),
             AsmOp::SC() => Op::SC(),
             AsmOp::LABEL(_) => return None,
@@ -404,6 +401,9 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
     }
 
     let labels = collect_labels(&asm);
+    for (key, val) in labels.iter() {
+        eprintln!("{:>32}: {:0>8X}", key, val);
+    }
     let mut addr = 0;
     asm.into_iter()
         .filter_map(|asm| {
