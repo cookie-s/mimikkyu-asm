@@ -138,13 +138,15 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
     }
     fn to_bin(dat: &Vec<(u32, u32)>) -> u32 {
         // FIXME kuso
-        {
+        /*{
             let mut sum_sz = 0;
             for &(_, sz) in dat {
                 sum_sz += sz;
             }
             assert_eq!(sum_sz, 32);
-        }
+        }*/
+        let (_, sz): (Vec<_>, Vec<u32>) = dat.iter().cloned().unzip();
+        assert_eq!(sz.iter().sum::<u32>(), 32);
         let mut res = 0u64;
         for &(bits, size) in dat {
             res <<= size;
