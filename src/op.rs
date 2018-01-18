@@ -148,7 +148,7 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
         let mut res = 0u64;
         for &(bits, size) in dat {
             res <<= size;
-            res += bits as u64;
+            res += (bits & ((1 << size) - 1)) as u64;
         }
         res as u32
     }
@@ -274,8 +274,7 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (freg_to_id(frt), 5),
             (0, 5),
             (freg_to_id(frb), 5),
-            (0, 1),
-            (get_xocode(&op), 9),
+            (get_xocode(&op), 10),
             (1, 1),
         ]),
         Op::FADD(frt, fra, frb) | Op::FSUB(frt, fra, frb) | Op::FDIV(frt, fra, frb) => {

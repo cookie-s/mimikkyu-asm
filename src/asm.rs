@@ -268,7 +268,7 @@ pub fn parse_asm(assembly: &String) -> AsmOpList {
             }
             "blr" => AsmOp::BLR(),
             "bctr" => AsmOp::BCTR(),
-            "bctrl" => AsmOp::BCTR(),
+            "bctrl" => AsmOp::BCTRL(),
             "beq" | "bne" | "ble" | "blt" | "bge" | "bgt" => {
                 let cr = expect_line_result!(parse_creg(expect_line_option!(parm.next())));
                 let ad = expect_line_result!(parse_const(expect_line_option!(parm.next())));
@@ -288,7 +288,7 @@ pub fn parse_asm(assembly: &String) -> AsmOpList {
             "mtlr" => AsmOp::MTLR(expect_line_result!(parse_greg(expect_line_option!(
                 parm.next()
             )))),
-            "mtctr" => AsmOp::MTLR(expect_line_result!(parse_greg(expect_line_option!(
+            "mtctr" => AsmOp::MTCTR(expect_line_result!(parse_greg(expect_line_option!(
                 parm.next()
             )))),
             "sc" => AsmOp::SC(),
@@ -372,25 +372,25 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
             AsmOp::BCTRL() => Op::BCTR(true),
             AsmOp::BEQ(cr, ref dat) => Op::BC(
                 cr,
-                (resolve_const(dat, labels) as i32 - addr as i32) as u32,
+                (resolve_const(dat, labels) as i64 - addr as i64) as u32,
                 Condition::EQ,
                 false,
             ),
             AsmOp::BNE(cr, ref dat) => Op::BC(
                 cr,
-                (resolve_const(dat, labels) as i32 - addr as i32) as u32,
+                (resolve_const(dat, labels) as i64 - addr as i64) as u32,
                 Condition::NE,
                 false,
             ),
             AsmOp::BLT(cr, ref dat) => Op::BC(
                 cr,
-                (resolve_const(dat, labels) as i32 - addr as i32) as u32,
+                (resolve_const(dat, labels) as i64 - addr as i64) as u32,
                 Condition::LT,
                 false,
             ),
             AsmOp::BGT(cr, ref dat) => Op::BC(
                 cr,
-                (resolve_const(dat, labels) as i32 - addr as i32) as u32,
+                (resolve_const(dat, labels) as i64 - addr as i64) as u32,
                 Condition::GT,
                 false,
             ),
