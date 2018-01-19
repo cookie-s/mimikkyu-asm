@@ -168,7 +168,7 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
         ]),
         Op::ADDI(rt, ra, imm)
         | Op::ADDIS(rt, ra, imm)
-        | Op::ORI(ra, rt, imm)
+        | Op::ORI(rt, ra, imm)
         | Op::ANDI(rt, ra, imm)
         | Op::ANDIS(rt, ra, imm) => to_bin(&vec![
             (get_opcode(&op), 6),
@@ -222,7 +222,6 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (off as u16 as u32, 16),
         ]),
         Op::SC() => to_bin(&vec![(get_opcode(&op), 6), (0, 26)]),
-        // swapping...
         Op::ADD(rt, ra, rb)
         | Op::SUBF(rt, ra, rb)
         | Op::AND(rt, ra, rb)
