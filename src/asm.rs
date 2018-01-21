@@ -1,6 +1,7 @@
 extern crate std;
 use std::collections::HashMap;
 
+use super::*;
 use super::{AsmOpList, CReg, FReg, GReg, OpList, SPReg};
 use super::op::{Condition, Op};
 
@@ -62,7 +63,9 @@ pub enum AsmOp {
     //BLE(CReg, Const),
     BGT(CReg, Const),
     //BGE(CReg, Const),
-    SC(),
+    SC_EXIT(),
+    SC_READ(GReg),
+    SC_WRITE(GReg),
 
     LABEL(String),
     LONG(Const),
@@ -291,7 +294,13 @@ pub fn parse_asm(assembly: &String) -> AsmOpList {
             "mtctr" => AsmOp::MTCTR(expect_line_result!(parse_greg(expect_line_option!(
                 parm.next()
             )))),
-            "sc" => AsmOp::SC(),
+            "sc_exit" => AsmOp::SC_EXIT(),
+            "sc_in" => AsmOp::SC_READ(expect_line_result!(parse_greg(expect_line_option!(
+                parm.next()
+            )))),
+            "sc_out" => AsmOp::SC_WRITE(expect_line_result!(parse_greg(expect_line_option!(
+                parm.next()
+            )))),
             _ => {
                 if let Ok(name) = parse_label(opc) {
                     AsmOp::LABEL(name)
@@ -394,7 +403,9 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
                 Condition::GT,
                 false,
             ),
-            AsmOp::SC() => Op::SC(),
+            AsmOp::SC_EXIT() => Op::SC(0, id_to_greg(0), id_to_greg(0)),
+            AsmOp::SC_READ(rt) => Op::SC(1, rt, id_to_greg(0)),
+            AsmOp::SC_WRITE(ra) => Op::SC(2, id_to_greg(0), ra),
             AsmOp::LABEL(_) => return None,
             AsmOp::LONG(ref dat) => Op::LONG(resolve_const(dat, labels)),
         })

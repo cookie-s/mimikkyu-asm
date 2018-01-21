@@ -50,7 +50,7 @@ pub enum Op {
     B(u32, bool),                   // LK
     BSPR(SPReg, bool),              // LK
     BC(CReg, u32, Condition, bool), // abs
-    SC(),
+    SC(u32, GReg, GReg),
 
     LONG(u32),
 }
@@ -89,7 +89,7 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             | Op::FMR(_, _) => 0b111111,
             Op::MFSPR(_, _) => 0b110000,
             Op::MTSPR(_, _) => 0b110001,
-            Op::SC() => 0b110111,
+            Op::SC(_, _, _) => 0b110111,
             Op::LONG(_) => unreachable!(),
         }
     }
@@ -194,7 +194,13 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (0, 15),
             (lk as u32, 1),
         ]),
-        Op::SC() => to_bin(&vec![(get_opcode(&op), 6), (0, 26)]),
+        Op::SC(code, rt, ra) => to_bin(&vec![
+            (get_opcode(&op), 6),
+            (greg_to_id(rt), 5),
+            (greg_to_id(ra), 5),
+            (0, 5),
+            (code, 11),
+        ]),
         Op::ADD(rt, ra, rb)
         | Op::SUBF(rt, ra, rb)
         | Op::AND(rt, ra, rb)
