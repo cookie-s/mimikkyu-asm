@@ -367,9 +367,9 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
             AsmOp::CMPWI(cr, ra, ref dat) => Op::CMPWI(cr, ra, resolve_const(dat, labels)),
             AsmOp::B(ref dat) => Op::B(resolve_const(dat, labels), false),
             AsmOp::BL(ref dat) => Op::B(resolve_const(dat, labels), true),
-            AsmOp::BLR() => Op::BLR(false),
-            AsmOp::BCTR() => Op::BCTR(false),
-            AsmOp::BCTRL() => Op::BCTR(true),
+            AsmOp::BLR() => Op::BSPR(SPReg::LK, false),
+            AsmOp::BCTR() => Op::BSPR(SPReg::CTR, false),
+            AsmOp::BCTRL() => Op::BSPR(SPReg::CTR, true),
             AsmOp::BEQ(cr, ref dat) => Op::BC(
                 cr,
                 (resolve_const(dat, labels) as i64 - addr as i64) as u32,

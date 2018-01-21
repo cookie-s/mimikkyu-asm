@@ -48,14 +48,14 @@ fn creg_to_id(x: CReg) -> u32 {
 }
 fn id_to_spreg(x: u32) -> SPReg {
     match x {
-        0b0100000000 => SPReg::LK,
-        0b0100100000 => SPReg::CTR,
+        0b00000 => SPReg::LK,
+        0b00001 => SPReg::CTR,
         _ => panic!("no such reg!"),
     }
 }
 fn spreg_to_id(r: SPReg) -> u32 {
     match r {
-        SPReg::LK => 0b0100000000,
-        SPReg::CTR => 0b0100100000,
+        SPReg::LK => 0b00000,
+        SPReg::CTR => 0b00001,
     }
 }
