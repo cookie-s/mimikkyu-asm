@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Condition {
-    AL,
+    //AL,
     EQ,
     NE,
     LT,
@@ -95,28 +95,28 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
     }
     fn get_xocode(op: &Op) -> u32 {
         match *op {
-            Op::CMP(_, _, _) => 0b000000,
-            Op::ADD(_, _, _) => 0b000001,
-            Op::SUBF(_, _, _) => 0b000010,
-            Op::NEG(_, _) => 0b001000,
-            Op::AND(_, _, _) => 0b010000,
-            Op::OR(_, _, _) => 0b010001,
-            Op::XOR(_, _, _) => 0b010010,
-            Op::SLW(_, _, _) => 0b010100,
-            Op::SRW(_, _, _) => 0b010101,
-            Op::FCMP(_, _, _) => 0b000000,
-            Op::FADD(_, _, _) => 0b000001,
-            Op::FSUB(_, _, _) => 0b000010,
-            Op::FMUL(_, _, _) => 0b000100,
-            Op::FDIV(_, _, _) => 0b000101,
-            Op::FNEG(_, _) => 0b001000,
-            Op::FMR(_, _) => 0b001001,
+            Op::CMP(_, _, _) => 0b000111,
+            Op::ADD(_, _, _) => 0b000000,
+            Op::SUBF(_, _, _) => 0b001000,
+            Op::NEG(_, _) => 0b001001,
+            Op::AND(_, _, _) => 0b000010,
+            Op::OR(_, _, _) => 0b000110,
+            Op::XOR(_, _, _) => 0b001010,
+            Op::SLW(_, _, _) => 0b001100,
+            Op::SRW(_, _, _) => 0b001101,
+            Op::FCMP(_, _, _) => 0b010111,
+            Op::FADD(_, _, _) => 0b010000,
+            Op::FSUB(_, _, _) => 0b010001,
+            Op::FMUL(_, _, _) => 0b010010,
+            Op::FDIV(_, _, _) => 0b010011,
+            Op::FNEG(_, _) => 0b010100,
+            Op::FMR(_, _) => 0b010101,
             _ => unreachable!(),
         }
     }
     fn get_bicode(cr: CReg, cond: Condition) -> u32 {
         4 * creg_to_id(cr) + match cond {
-            Condition::AL => 0,
+            //Condition::AL => 0,
             Condition::EQ | Condition::NE => 2,
             Condition::LT => 0,
             Condition::GT => 1,
@@ -124,7 +124,7 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
     }
     fn get_bocode(cond: Condition) -> u32 {
         match cond {
-            Condition::AL => 0b11111,
+            //Condition::AL => 0b11111,
             Condition::EQ => 0b01100,
             Condition::NE => 0b00100,
             Condition::LT => 0b01100,
@@ -199,7 +199,8 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (greg_to_id(rt), 5),
             (greg_to_id(ra), 5),
             (0, 5),
-            (code, 11),
+            (code, 10),
+            (1, 1),
         ]),
         Op::ADD(rt, ra, rb)
         | Op::SUBF(rt, ra, rb)
