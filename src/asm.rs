@@ -45,6 +45,9 @@ pub enum AsmOp {
     FDIV(FReg, FReg, FReg),
     FNEG(FReg, FReg),
     FMR(FReg, FReg),
+    FSQRT(FReg, FReg),
+    FABS(FReg, FReg),
+    FADDABS(FReg, FReg, FReg),
     FCMP(CReg, FReg, FReg),
 
     LFS(FReg, Const, GReg),
@@ -191,24 +194,27 @@ pub fn parse_asm(assembly: &String) -> AsmOpList {
                     _ => unreachable!(),
                 }
             }
-            "fadd" | "fsub" | "fmul" | "fdiv" => {
+            "fadd" | "fsub" | "fmul" | "fdiv" | "fadd.a" => {
                 let frt = expect_line_result!(parse_freg(expect_line_option!(parm.next())));
                 let fra = expect_line_result!(parse_freg(expect_line_option!(parm.next())));
                 let frb = expect_line_result!(parse_freg(expect_line_option!(parm.next())));
                 match opc {
                     "fadd" => AsmOp::FADD(frt, fra, frb),
+                    "fadd.a" => AsmOp::FADDABS(frt, fra, frb),
                     "fsub" => AsmOp::FSUB(frt, fra, frb),
                     "fmul" => AsmOp::FMUL(frt, fra, frb),
                     "fdiv" => AsmOp::FDIV(frt, fra, frb),
                     _ => unreachable!(),
                 }
             }
-            "fmr" | "fneg" => {
+            "fmr" | "fneg" | "fsqrt" | "fabs" => {
                 let frt = expect_line_result!(parse_freg(expect_line_option!(parm.next())));
                 let fra = expect_line_result!(parse_freg(expect_line_option!(parm.next())));
                 match opc {
                     "fmr" => AsmOp::FMR(frt, fra),
                     "fneg" => AsmOp::FNEG(frt, fra),
+                    "fsqrt" => AsmOp::FSQRT(frt, fra),
+                    "fabs" => AsmOp::FABS(frt, fra),
                     _ => unreachable!(),
                 }
             }
@@ -364,11 +370,14 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
             AsmOp::LWZ(rt, ref dat, ra) => Op::LWZ(rt, resolve_const(dat, labels), ra),
             AsmOp::STW(rt, ref dat, ra) => Op::STW(rt, resolve_const(dat, labels), ra),
             AsmOp::FADD(frt, fra, frb) => Op::FADD(frt, fra, frb),
+            AsmOp::FADDABS(frt, fra, frb) => Op::FADDABS(frt, fra, frb),
             AsmOp::FSUB(frt, fra, frb) => Op::FSUB(frt, fra, frb),
             AsmOp::FMUL(frt, fra, frb) => Op::FMUL(frt, fra, frb),
             AsmOp::FDIV(frt, fra, frb) => Op::FDIV(frt, fra, frb),
             AsmOp::FNEG(frt, fra) => Op::FNEG(frt, fra),
             AsmOp::FMR(frt, frs) => Op::FMR(frt, frs),
+            AsmOp::FSQRT(frt, frs) => Op::FSQRT(frt, frs),
+            AsmOp::FABS(frt, frs) => Op::FABS(frt, frs),
             AsmOp::FCMP(cr, fra, frt) => Op::FCMP(cr, fra, frt),
             AsmOp::LFS(frt, ref dat, ra) => Op::LFS(frt, resolve_const(dat, labels), ra),
             AsmOp::STFS(frt, ref dat, ra) => Op::STFS(frt, resolve_const(dat, labels), ra),

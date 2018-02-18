@@ -35,11 +35,14 @@ pub enum Op {
     STW(GReg, u32, GReg),
 
     FADD(FReg, FReg, FReg),
+    FADDABS(FReg, FReg, FReg),
     FSUB(FReg, FReg, FReg),
     FMUL(FReg, FReg, FReg),
     FDIV(FReg, FReg, FReg),
     FNEG(FReg, FReg),
     FMR(FReg, FReg),
+    FSQRT(FReg, FReg),
+    FABS(FReg, FReg),
     FCMP(CReg, FReg, FReg),
 
     LFS(FReg, u32, GReg),
@@ -82,11 +85,14 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             | Op::SRW(_, _, _) => 0b111110,
             Op::FCMP(_, _, _)
             | Op::FADD(_, _, _)
+            | Op::FADDABS(_, _, _)
             | Op::FSUB(_, _, _)
             | Op::FMUL(_, _, _)
             | Op::FDIV(_, _, _)
             | Op::FNEG(_, _)
-            | Op::FMR(_, _) => 0b111111,
+            | Op::FMR(_, _)
+            | Op::FSQRT(_, _)
+            | Op::FABS(_, _) => 0b111111,
             Op::MFSPR(_, _) => 0b110000,
             Op::MTSPR(_, _) => 0b110001,
             Op::SC(_, _, _) => 0b110111,
@@ -106,11 +112,14 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             Op::SRW(_, _, _) => 0b001101,
             Op::FCMP(_, _, _) => 0b010111,
             Op::FADD(_, _, _) => 0b010000,
+            Op::FADDABS(_, _, _) => 0b110000,
             Op::FSUB(_, _, _) => 0b010001,
             Op::FMUL(_, _, _) => 0b010010,
             Op::FDIV(_, _, _) => 0b010011,
             Op::FNEG(_, _) => 0b010100,
             Op::FMR(_, _) => 0b010101,
+            Op::FSQRT(_, _) => 0b010110,
+            Op::FABS(_, _) => 0b011000,
             _ => unreachable!(),
         }
     }
@@ -255,15 +264,18 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (get_xocode(&op), 10),
             (1, 1),
         ]),
-        Op::FNEG(frt, fra) | Op::FMR(frt, fra) => to_bin(&vec![
-            (get_opcode(&op), 6),
-            (freg_to_id(frt), 5),
-            (freg_to_id(fra), 5),
-            (0, 5),
-            (get_xocode(&op), 10),
-            (1, 1),
-        ]),
+        Op::FNEG(frt, fra) | Op::FMR(frt, fra) | Op::FSQRT(frt, fra) | Op::FABS(frt, fra) => {
+            to_bin(&vec![
+                (get_opcode(&op), 6),
+                (freg_to_id(frt), 5),
+                (freg_to_id(fra), 5),
+                (0, 5),
+                (get_xocode(&op), 10),
+                (1, 1),
+            ])
+        }
         Op::FADD(frt, fra, frb)
+        | Op::FADDABS(frt, fra, frb)
         | Op::FSUB(frt, fra, frb)
         | Op::FMUL(frt, fra, frb)
         | Op::FDIV(frt, fra, frb) => to_bin(&vec![
