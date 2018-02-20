@@ -15,8 +15,9 @@ pub enum Const {
 
 #[derive(Debug)]
 pub enum AsmOp {
-    LIS(GReg, Const),
     LI(GReg, Const),
+    LIS(GReg, Const),
+
     ADDI(GReg, GReg, Const),
     ADDIS(GReg, GReg, Const),
     ADD(GReg, GReg, GReg),
@@ -166,11 +167,11 @@ pub fn parse_asm(assembly: &String) -> AsmOpList {
             ".long" => AsmOp::LONG(expect_line_result!(parse_const(expect_line_option!(
                 parm.next()
             )))),
-            "lis" => AsmOp::LIS(
+            "li" => AsmOp::LI(
                 expect_line_result!(parse_greg(expect_line_option!(parm.next()))),
                 expect_line_result!(parse_const(expect_line_option!(parm.next()))),
             ),
-            "li" => AsmOp::LI(
+            "lis" => AsmOp::LIS(
                 expect_line_result!(parse_greg(expect_line_option!(parm.next()))),
                 expect_line_result!(parse_const(expect_line_option!(parm.next()))),
             ),
@@ -349,8 +350,8 @@ pub fn convert_to_realops(asm: &AsmOpList) -> OpList {
         }
 
         Some(match *asm {
+            AsmOp::LI(rt, ref dat) => Op::LI(rt, resolve_const(dat, labels)),
             AsmOp::LIS(rt, ref dat) => Op::ADDIS(rt, GReg(0), resolve_const(dat, labels)),
-            AsmOp::LI(rt, ref dat) => Op::ADDI(rt, GReg(0), resolve_const(dat, labels)),
             AsmOp::ADDIS(rt, ra, ref dat) => Op::ADDIS(rt, ra, resolve_const(dat, labels)),
             AsmOp::ADDI(rt, ra, ref dat) => Op::ADDI(rt, ra, resolve_const(dat, labels)),
             AsmOp::ADD(rt, ra, rb) => Op::ADD(rt, ra, rb),

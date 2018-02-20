@@ -8,7 +8,7 @@ pub fn main() {
     std::io::stdin().read_to_string(&mut s).unwrap();
 
     let asm = mimikkyu_asm::asm::parse_asm(&s);
-    //println!("{:?}", &asm);
+    //eprintln!("{:?}", &asm);
 
     let ops = mimikkyu_asm::asm::convert_to_realops(&asm);
     for (i, op) in (&ops).into_iter().enumerate() {

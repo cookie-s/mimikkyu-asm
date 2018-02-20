@@ -13,6 +13,8 @@ pub enum Condition {
 
 #[derive(Debug)]
 pub enum Op {
+    LI(GReg, u32),
+
     ADDI(GReg, GReg, u32),
     ADDIS(GReg, GReg, u32),
     ADD(GReg, GReg, GReg),
@@ -61,6 +63,7 @@ pub enum Op {
 pub fn convert_to_machinecode(op: &Op) -> u32 {
     fn get_opcode(op: &Op) -> u32 {
         match *op {
+            Op::LI(_, _) => 0b000100,
             Op::ADDI(_, _, _) => 0b000000,
             Op::ADDIS(_, _, _) => 0b000001,
             Op::ANDI(_, _, _) => 0b000010,
@@ -152,6 +155,11 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
     }
 
     match *op {
+        Op::LI(rt, imm) => to_bin(&vec![
+            (get_opcode(&op), 6),
+            (greg_to_id(rt), 5),
+            (imm as u32, 21),
+        ]),
         Op::CMPWI(cr, ra, imm) => to_bin(&vec![
             (get_opcode(&op), 6),
             (creg_to_id(cr), 3),
@@ -188,12 +196,12 @@ pub fn convert_to_machinecode(op: &Op) -> u32 {
             (1, 1), // TODO
             (lk as u32, 1),
         ]),
+        // TODO abs
         Op::BC(cr, addr, cond, abs) => to_bin(&vec![
             (get_opcode(&op), 6),
             (get_bocode(cond), 5),
             (get_bicode(cr, cond), 5),
-            ((addr >> 2) as u32, 14),
-            (abs as u32, 1),
+            ((addr >> 2) as u32, 15),
             (0, 1),
         ]),
         Op::BSPR(sp, lk) => to_bin(&vec![
